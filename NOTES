@@ -1,0 +1,2 @@
+; Global variables in common lisp are given names that start and end with *
+; Constants are given names starting and ending with 
