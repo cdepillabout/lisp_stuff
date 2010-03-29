@@ -1,2 +1,23 @@
 ; Global variables in common lisp are given names that start and end with *
-; Constants are given names starting and ending with 
+; Constants are given names starting and ending with +
+
+; Normally if a function is called with no argument for a particular
+; keyword parameter, the parameter will have the value NIL. However,
+; sometimes you'll want to be able to distinguish between a NIL that
+; was explicitly passed as the argument to a keyword parameter and
+; the default value NIL. To allow this, when you specify a keyword
+; parameter you can replace the simple name with a list consisting of
+; the name of the parameter, a default value, and another parameter
+; name, called a supplied-p parameter. The supplied-p parameter will
+; be set to true or false depending on whether an argument was
+; actually passed for that keyword parameter in a particular call to
+; the function. Here's a version of foo that uses this feature:
+
+(defun foo (&key a (b 20) (c 30 c-p)) (list a b c c-p))
+
+; Now the same calls from earlier yield these results:
+
+(foo :a 1 :b 2 :c 3)  ==> (1 2 3 T)
+(foo :c 3 :b 2 :a 1)  ==> (1 2 3 T)
+(foo :a 1 :c 3)       ==> (1 20 3 T)
+(foo)                 ==> (NIL 20 30 NIL)
