@@ -17,7 +17,7 @@
 
 (defmacro backwards (expr) (my-reverse2 expr))
 
-(backwards (3 2 +))
+;(backwards (3 2 +))
 
 `(1 2 (+ 1 2)) ; ==> (1 2 (+ 1 2))
 `(1 2 ,(+ 1 2)); ==> (1 2 3)
@@ -67,10 +67,10 @@
 ;; the name of the actual parameter, you can replace the parameter name with
 ;; another list containing the keyword to use when calling the function and
 ;; the name to be used for the parameter.
-(defun foo (&key ((:apple a)) ((:box b) 0) ((:charlie c) 0 c-supplied-p))
+(defun foo-key (&key ((:apple a)) ((:box b) 0) ((:charlie c) 0 c-supplied-p))
   (list a b c c-supplied-p))
 
-(foo :apple 3 :charlie t)
+(foo-key :apple 3 :charlie t)
 
 
 ;; The problem is that if a caller doesn't supply values for
@@ -85,3 +85,38 @@
 (foo 1) ; ==> (1 nil nil)
 ;But this will signal an error:
 ;(foo 1 :z 3) ==> ERROR
+
+
+;; following function uses nested loops to find the first pair of
+;; numbers, each less than 10, whose product is greater than the argument,
+;; and it uses RETURN-FROM to return the pair as soon as it finds it
+(defun foo3 (n)
+  (dotimes (i 10)
+    (dotimes (j 10)
+      (when (> (* i j) n)
+        (return-from foo3 (list i j))))))
+
+
+(function foo3) ; this is the same as #'foo3
+
+(funcall #'foo3 55) ; this is exactly the same as (foo3 55) 
+
+;; accepts a function object as an argument and plots a simple ASCII-art
+;; histogram of the values returned by the argument function when it's
+;; invoked on the values from min to max, stepping by step.
+(defun plot (fn min max step)
+  (loop for i from min to max by step do
+        (loop repeat (funcall fn i) do (format t "*"))
+        (format t "~%")))
+; You can call it like this: (plot #'exp 0 4 1/2)
+
+;; But imagine you wanted to call it with a list.
+;; You can do it like this:
+;; (apply #'plot '(exp 0 4 1/2))
+;; You can even do something like this:
+;; (apply #'plot #'exp (0 4 1/2))
+;; (apply #'plot #'exp 0 (4 1/2))
+
+
+;; lambda
+(funcall #'(lambda (x y) (+ x y)) 1 1000)
