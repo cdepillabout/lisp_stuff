@@ -120,3 +120,160 @@
 
 ;; lambda
 (funcall #'(lambda (x y) (+ x y)) 1 1000)
+
+
+;; Another binding form is a variant of LET, LET*. The difference is that in a
+;; LET, the variable names can be used only in the body of the LET--the part of
+;; the LET  after the variables list--but in a LET*, the initial value forms
+;; for each variable can refer to variables introduced earlier in the variables
+;; list. Thus, you can write the following:
+(let* ((x 10)
+       (y (+ x 10)))
+  (list x y))
+;; but not this:
+;(let ((x 10)
+;      (y (+ x 10)))
+;  (list x y))
+
+
+;; you can capture the closure created by the previous expression in a global
+;; variable like this:
+(defparameter *my-cool-fn*
+  (let ((count 0))
+	#'(lambda ()
+		(setf count (1+ count)))))
+;; Then each time you invoke it, the value of count will increase by one.
+;CL-USER> (funcall *fn*) ==> 1
+;CL-USER> (funcall *fn*) ==> 2
+;CL-USER> (funcall *fn*) ==> 3
+
+;; defparameter and defvar establish a name as a dynamic variable.
+;; defparameter unconditionally assigns the an initial-value to the dynamic
+;; variable. defvar, by contrast, assigns an initial-value (if supplied) to
+;; a dynamic variable only if the name is not already bound. 
+(defvar a 3)        ; ==> A
+a                   ; ==> 3
+(defvar a 5)        ; ==> A
+a                   ; ==> 3
+(defparameter a 5)  ; ==> A
+a                   ; ==> 5
+
+
+;; This shows how dynamic and lexical scope works.
+(defvar *x* 10)
+(defun lalalax () (format t "X: ~d~%" *x*))
+(lalalax) ; ==> 10
+(let ((*x* 20))
+  (lalalax)) ; ==> 20
+(lalalax) ; ==> 10
+
+(defun barbar ()
+  (lalalax)
+  (let ((*x* 20)) (lalalax))
+  (lalalax))
+
+(barbar) ; ==> X: 10, X: 20, X: 10
+
+(defun lalalax ()
+  (format t "Before assignment~18tX: ~d~%" *x*)
+  (setf *x* (+ 1 *x*))
+  (format t "After assignment~18tX: ~d~%" *x*))
+
+;; The middle call doesn't see the global binding because of the LET.
+(barbar) ; ==>
+; Before assignment X: 10
+; After assignment  X: 11
+; Before assignment X: 20
+; After assignment  X: 21
+; Before assignment X: 11
+; After assignment  X: 12
+
+;; If you always name global variables according to the * naming convention,
+;; you'll never accidentally use a dynamic binding where you intend to
+;; establish a lexical binding.
+
+
+;; The basic form of DEFCONSTANT is like DEFPARAMETER.
+;(defconstant name initial-value-form [ documentation-string ])
+;; DEFCONSTANT has a global effect on the name used--thereafter the name
+;; can be used only to refer to the constant; it can't be used as a function
+;; parameter or rebound with any other binding form. Thus, many Lisp
+;; programmers follow a naming convention of using names starting and ending
+;; with + for constants.
+
+
+;; Set a binding to a new value
+(defvar hohoho 24)
+hohoho ; ==> 24
+(setf hohoho 5000)
+hohoho ; ==> 5000
+
+; instead of this
+;(setf x 1)
+;(setf y 2)
+; you can write this:
+;(setf x 1 y 2)
+
+;; you can also do something like this, which sets x and y to be the same 
+;; random value
+;(setf x (setf y (random 10)))
+
+;; Here is how setf works with normal values, arrays, hashes, and fields
+; Simple variable:    (setf x 10) 
+; Array:              (setf (aref a 0) 10)
+; Hash table:         (setf (gethash 'key hash) 10)
+; Slot named 'field': (setf (field o) 10)
+
+
+;; Quick incrementers and decrementers
+; (incf x)    === (setf x (+ x 1))
+; (decf x)    === (setf x (- x 1))
+; (incf x 10) === (setf x (+ x 10))
+
+
+;; when and unless macros
+(defmacro my-when (condition &rest body)
+  `(if ,condition (progn ,@body)))
+(defmacro my-unless (condition &rest body)
+  `(if (not ,condition) (progn ,@body)))
+
+(when (< 1 2)
+  (print "hello")
+  (print "bye")
+  3)
+
+;; dolist and dotimes -- pretty basic looping constructs		 
+(dolist (x '(1 2 3)) (print x))
+(dolist (x '(1 2 3)) (print x) (if (evenp x) (return)))
+(dotimes (i 4) (print i))
+
+;; basic do template:
+; (do (variable-definition*)
+;     (end-test-form result-form*)
+;   statement*)
+
+;; variable definition template in do form:
+; (var init-form step-form)
+;; If you leave out step-form, then the variable keeps the same
+;; value unless you explicitly change it.
+
+;; At the beginning of each iteration, after all the loop variables have
+;; been given their new values, the end-test-form is evaluated. As long
+;; as it evaluates to NIL, the iteration proceeds, evaluating the statements
+;; in order. When the end-test-form evaluates to true, the result-forms
+;; are evaluated, and the value of the last result form is returned as the
+;; value of the DO expression.
+
+;; Print fibonacci numbers, returning the 11th fibonacci number
+(do ((n 0 (1+ n))
+     (cur 0 next)
+     (next 1 (+ cur next)))
+    ((= 10 n) cur)
+  (print cur))
+
+
+;; To print a character
+#\l ; ==> prints the character 'l'
+
+;; Make a list of all the lower case characters
+(loop for i from 97 until (eql (code-char i) #\{) collect (code-char i))
