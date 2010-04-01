@@ -277,3 +277,132 @@ hohoho ; ==> 5000
 
 ;; Make a list of all the lower case characters
 (loop for i from 97 until (eql (code-char i) #\{) collect (code-char i))
+
+
+;; Macro for doprimes, which is a loop that executes the body once
+;; for each prime number.
+
+; helper functions
+(defun primep (number)
+  "Test whether or not a number is prime."
+  (when (> number 1)
+    (loop for fac from 2 to (isqrt number) never (zerop (mod number fac)))))
+
+(defun next-prime (number)
+  "Find the next prime number equal to or greater than number."
+  (loop for n from number when (primep n) return n))
+
+; how we should call the macro
+(do-primes (p 0 19)
+  (format t "~d " p))
+
+; you should use &body for this because it makes more sense
+(defmacro do-primes (p start end &body body)
+  `(do ((,p (next-prime ,start) (next-prime (1+ ,p))))
+	   ((> ,p ,end) ,p) 
+	 ,@body))
+
+(defmacro do-primes2 (listargs &body body)
+  (let ((p (car listargs))
+		(start (cadr listargs))
+		(end (caddr listargs)))
+	`(do ((,p (next-prime ,start) (next-prime (1+ ,p))))
+		 ((> ,p ,end) ,p) 
+	   ,@body)))
+	
+;; Destructuring parameter lists.
+(defmacro do-primes3 ((var start end) &body body)
+  `(do ((,var (next-prime ,start) (next-prime (1+ ,var))))
+       ((> ,var ,end))
+     ,@body))
+
+
+;; But this leaks.  end will be evaluated multiple times.
+;; Here is how to fix it:
+(defmacro do-primes-4 ((var start end) &body body)
+  `(do ((ending-value ,end)
+        (,var (next-prime ,start) (next-prime (1+ ,var))))
+       ((> ,var ending-value))
+     ,@body))
+
+;; But this also doesn't work.  end will be evaluated before
+;; start.  So this is how you can fix it:
+(defmacro do-primes-5 ((var start end) &body body)
+  `(do ((,var (next-prime ,start) (next-prime (1+ ,var)))
+        (ending-value ,end))
+       ((> ,var ending-value))
+     ,@body))
+;; This also doesn't work correctly!! It will fail on a call like this:
+;(do-primes-5 (ending-value 0 10)
+;  (print ending-value))
+;; It will macro expand to this:
+;(do ((ending-value (next-prime 0) (next-prime (1+ ending-value)))
+;     (ending-value 10))
+;    ((> ending-value ending-value))
+;  (print ending-value))
+;; This is not correct because ending-value is used in two different places
+
+;; The way to fix this is with gensym
+(defmacro do-primes-6 ((var start end) &body body)
+  (let ((ending-value-name (gensym)))
+    `(do ((,var (next-prime ,start) (next-prime (1+ ,var)))
+          (,ending-value-name ,end))
+         ((> ,var ,ending-value-name))
+       ,@body)))
+;; ending-value-name is a variable whose value is the name of another variable
+
+
+;;; Rules of thumb for writing leakless macros:
+;;; 1) Unless there's a particular reason to do otherwise, include any
+;;;    subforms in the expansion in positions that will be evaluated in
+;;;    the same order as the subforms appear in the macro call.
+;;; 2) Unless there's a particular reason to do otherwise, make sure subforms
+;;;    are evaluated only once by creating a variable in the expansion to hold
+;;;    the value of evaluating the argument form and then using that variable
+;;;    anywhere else the value is needed in the expansion.
+;;; 3) Use GENSYM at macro expansion time to create variable names used in the
+;;;    expansion.
+
+;; this is my version that is just a little different
+(defmacro do-primes-7 ((var start end) &body body)
+  (let ((starting-value-name (gensym))
+		(ending-value-name (gensym)))
+	`(let ((,starting-value-name ,start)
+		   (,ending-value-name ,end))
+	   (do ((,var (next-prime ,starting-value-name) (next-prime (1+ ,var))))
+		   ((> ,var ,ending-value-name))
+		 ,@body))))
+
+
+;; It would be nice to write a macro that could do the gensym stuff for us.
+;; Note how you can use a comma to interpolate the value of the LOOP expression.
+(defmacro with-gensyms ((&rest names) &body body)
+  `(let ,(loop for n in names collect `(,n (gensym)))
+     ,@body))
+
+;; So now you can write do-primes like this:
+(defmacro do-primes-8 ((var start end) &body body)
+  (with-gensyms (ending-value-name)
+    `(do ((,var (next-prime ,start) (next-prime (1+ ,var)))
+          (,ending-value-name ,end))
+         ((> ,var ,ending-value-name))
+       ,@body)))
+
+
+;; Another classic macro-writing macro is once-only, which is used to generate
+;; code that evaluates certain macro arguments once only and in a particular
+;; order.
+(defmacro once-only ((&rest names) &body body)
+  (let ((gensyms (loop for n in names collect (gensym))))
+    `(let (,@(loop for g in gensyms collect `(,g (gensym))))
+	   `(let (,,@(loop for g in gensyms for n in names collect ``(,,g ,,n)))
+		  ,(let (,@(loop for n in names for g in gensyms collect `(,n ,g)))
+				,@body)))))
+
+;; Using once-only, you could write do-primes almost as simply as the original
+;; leaky version, like this:
+(defmacro do-primes-11 ((var start end) &body body)
+  (once-only (start end)
+    `(do ((,var (next-prime ,start) (next-prime (1+ ,var))))
+         ((> ,var ,end))
+       ,@body)))
