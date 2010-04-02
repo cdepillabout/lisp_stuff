@@ -21,3 +21,16 @@
 (foo :c 3 :b 2 :a 1)  ==> (1 2 3 T)
 (foo :a 1 :c 3)       ==> (1 20 3 T)
 (foo)                 ==> (NIL 20 30 NIL)
+
+; The read syntax for characters objects is simple: #\ followed by the
+; desired character. Thus, #\x is the character x. Any character can be
+; used after the #\, including otherwise special characters such as ",
+; (, and whitespace. However, writing whitespace characters this way
+; isn't very (human) readable; an alternative syntax for certain
+; characters is #\ followed by the character's name. Exactly what names
+; are supported depends on the character set and on the Lisp
+; implementation, but all implementations support the names Space and
+; Newline. Thus, you should write #\Space instead of #\ , though the
+; latter is technically legal. Other semistandard names (that
+; implementations must use if the character set has the appropriate
+; characters) are Tab, Page, Rubout, Linefeed, Return, and Backspace.

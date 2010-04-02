@@ -144,3 +144,41 @@
 (encode '(a a a a b c c a a d e e e e)) ; ==> ((4 A) (1 B) (2 C) (2 A) (1 D)(4 E))
 
 
+
+;; Problem 11
+;; Modified run-length encoding.
+;; Modify the result of problem P10 in such a way that
+;; if an element has no duplicates it is simply copied into
+;; the result list. Only elements with duplicates are
+;; transferred as (N E) lists.
+(defun encode-helper-modified (packed-list)
+  (let ((firstelement (caar packed-list))
+		(firstlength (length (car packed-list))))
+	(cond ((not packed-list) nil)
+		  ((= firstlength 1)
+		   (cons firstelement (encode-helper-modified (cdr packed-list))))
+		  (t (cons (list firstlength firstelement) (encode-helper-modified (cdr packed-list)))))))
+
+(defun encode-modified (list)
+  (if (not list)
+	  nil
+	  (encode-helper-modified (pack list))))
+
+(encode-modified '(a a a a b c c a a d e e e e)) ; ==> ((4 A) B (2 C) (2 A) D (4 E))
+
+
+;; Problem 12
+;; Decode a run-length encoded list.
+;; Given a run-length code list generated as specified in problem P11. Construct
+;; its uncompressed version.
+(defun multiply-items (length item)
+  (if (= length 0) nil
+	  (cons item (multiply-items (1- length) item))))
+					  
+(defun decode-modified (list)
+  (cond ((not list) nil)
+		((atom (car list))
+		 (cons (car list) (decode-modified (cdr list))))
+		(t (let ((length (caar list))
+				 (item (cadar list)))
+			 (append (multiply-items length item) (decode-modified (cdr list)))))))
