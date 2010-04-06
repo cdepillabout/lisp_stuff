@@ -30,7 +30,8 @@
    binary.  For instance, to get a binary list for the number 12,
    you would pass in the list '(1 2) and get back the list 
    '(1 1 0 0)."
-  (let ((all-zeros (if (find-if-not #'zerop list) nil t)))
+  ;(let ((all-zeros (if (find-if-not #'zerop list) nil t)))
+  (let ((all-zeros (every #'zerop list)))
 	(cond
 	 ;; we have a binary string started that we've been building, so
 	 ;; we just return it.
