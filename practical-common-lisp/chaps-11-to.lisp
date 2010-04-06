@@ -134,3 +134,19 @@
 (concatenate 'vector #(1 2 3) '(4 5 6)) ; ==> #(1 2 3 4 5 6)
 (concatenate 'list #(1 2 3) '(4 5 6)) ; ==> (1 2 3 4 5 6)
 (concatenate 'string "abc" '(#\d #\e #\f)) ; ==> "abcdef"
+
+;; Two sorting functions, #'sort and #'stable-sort.
+;; The are equivalent, except that stable-sort guarantees that it
+;; will not reorder elements that it deems equivalent.
+;; These are both destructive functions, so you should make a
+;; copy of the sequence if you want to keep the unsorted sequence.
+(sort (vector "foo" "bar" "baz") #'string<) ; ==> #("bar" "baz" "foo")
+
+;; The MERGE function takes two sequences and a predicate and returns
+;; a sequence produced by merging the two sequences, according to the
+;; predicate. It's related to the two sorting functions in that if
+;; each sequence is already sorted by the same predicate, then the
+;; sequence returned by MERGE will also be sorted. 
+(merge 'vector #(1 3 5) #(2 4 6) #'<) ; ==> #(1 2 3 4 5 6)
+(merge 'list #(1 3 5) #(2 4 6) #'<) ; ==> (1 2 3 4 5 6)
+
