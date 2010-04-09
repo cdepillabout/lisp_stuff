@@ -154,29 +154,126 @@ row of table."
 			 (return-from can-drop-elements-block nil)))
 		t)))
 
+(defun piece-row-col-assert (piece row &optional column)
+  "This just makes sure we aren't passing in any values that we should not be passing in."
+  (assert (< row (length piece)) (row piece) "ROW(~a) is outside of PIECE(~a)."
+		  row piece)
+  (assert (>= row 0) (row) "ROW(~a) is too small." row)
+  (when (not (null column))
+	  (progn
+		(assert (>= column 0) (column) "COLUMN(~a) is too small." column)
+		(assert (< column (length (nth row piece)))
+				(column) "COLUMN(~a) is too long." column))))
+
+(defun table-piece-pos-level-assert (table piece row column pos level)
+  "Make sure everything will fit.  Level is not out of bounds, pos is not out of bounds, and adding piece to the table will not exceed the width of the table."
+  (piece-row-col-assert piece row column)
+  (assert (>= level 0) (level)
+		  "LEVEL(~a) is above the table. (So LEVEL is too low)" level)
+  (assert (< level (length table)) (level)
+		  "LEVEL(~a) is below the table. (So LEVEL is too high)" level)
+  (assert (>= pos 0) (pos) "POS(~a) is too little.  Below 0" pos)
+  (assert (< pos (length (car table)))
+		  (pos) "POS(~a) is off the right of TABLE." pos)
+  (assert (<= (+ pos (length (car piece))) (length (car table)))
+		  (pos) "The length of PIECE plus POSITION(~a) is too wide for TABLE."
+		  pos)
+  (assert (<= (- (1+ level) (get-row-from-bottom piece row))
+				 (length table))
+			  (level row table)
+			  "Final row(~a) position(~a) is below the bottom of length TABLE(~a)"
+			  row (- (1+ level) (get-row-from-bottom piece row)) (1- (length table))))
+		  
+
+(defun get-row-from-bottom (piece row)
+  "Get the row from the bottom of the piece.  For instance, passing row 3 of an i-piece will return 0, since it is the bottom row of the i-piece."
+  (piece-row-col-assert piece row)
+  (- (1- (length piece)) row))
+
+(defun elem-below-this-in-piece (piece row column)
+  "Returns true if there is a solid element below the element at ROWxCOLUMN."
+  (piece-row-col-assert piece row column)
+  (notevery #'(lambda (x) (equal x *empty-symbol*))
+			(loop
+			   for i from (1+ row) to (1- (length piece))
+			   for element = (nth column (nth i piece))
+			   collect element)))
+
+(defun elem-below-this-in-table (table piece row column position level)
+  "Returns true if there is a solid element in the TABLE below the element in PIECE at ROWxCOLUMN."
+  (table-piece-pos-level-assert table piece row column position level)
+  (assert (>= (- level (get-row-from-bottom piece row)) 0)
+		  () "The element in piece is above the table.")
+  (assert (not (elem-below-this-in-piece piece row column))
+		  () "There is an element below this one in piece")
+  (assert (not (elem-at-bottom-of-table table piece row column position level))
+		  () "This element is already at the bottom of table")
+  (let ((new-level (- level (get-row-from-bottom piece row))))
+	(not (equal (get-element new-level (+ position column) table)
+				*empty-symbol*))))
+
+(defun elem-at-bottom-of-table (table piece row column position level)
+  "Returns true if the element of piece is at the bottom of the TABLE."
+  (table-piece-pos-level-assert table piece row column position level)
+  ;; TODO, this is where my error is!!
+  (= (+ (1+ level) row)
+	 (length table)))
+
 (defun can-drop-element (table piece row column element position level)
   "Returns true if the specific ELEMENT of PIECE (at ROWxCOLUMN) can be dropped
-into TABLE at POSITION on LEVEL."
+into TABLE at POSITION on LEVEL. LEVEL will always be the level of the lowest
+element of piece, not the level of the currently working element."
+  (table-piece-pos-level-assert table piece row column position level)
+		; if the element is empty, then it can definitely drop
   (cond ((equal element *empty-symbol*) t)
+		; if the element is off the table, then it can drop
+		((> 0 (- level (get-row-from-bottom piece row))) t)
+		; if there is a solid element below this element in piece, then
+		; it can drop
+		((elem-below-this-in-piece piece row column) t)
+		; if this piece is at the bottom of the table, then
+		; it cannot drop
+		((elem-at-bottom-of-table table piece row column position level)
+		 nil)
+		; is there anything on the board that would prevernt us from dropping,
+		; then we cannot drop.
+		((elem-below-this-in-table table piece row column position level)
+		 nil)
+		; otherwise then we can drop
+		(t t)))
 
-		;; TODO, maybe I should have something that gets the row from
-		;; the bottom of the piece.  that would help....
 
-		;; if we are off the board, then we can drop it
-		
-	    ;; check if there is an element below this element 
-		;; within piece. If so, then we are safe to drop it.
+(defun flatten (list)
+  "Flattens a tree into just a flat list of it's atoms."
+  (if (null list)
+	  nil
+	  (let ((first-elem (first list))
+			(remaining (rest list)))
+		(cond ((atom first-elem)
+			   (cons first-elem (flatten remaining)))
+			  ((listp first-elem)
+			   (append (flatten first-elem) (flatten remaining)))))))
 
-		;; if there is no element below this element, then check
-		;; if there is anything on the board that would prevent us
-		;; from dropping it.
-		
-  nil)
+(defun can-drop-piece-helper (table piece position level)
+  (loop
+	 for row from 0 to (1- (length piece))
+	 collect (loop
+				for column from 0 to (1- (length (nth row piece)))
+				for element = (nth column (nth row piece))
+				collect (can-drop-element table piece row
+										  column element position level))))
 
+(defun can-drop-piece (table piece position level)
+  "Returns true if we can drop this piece into level and position of table."
+  ;(every #'(lambda (x) (eq x t))
+		 (flatten (can-drop-piece-helper table piece position level)))
   
 ;; TODO: This isn't exactly what we want.  We want to be able to place
 ;; a piece stategically in the table, not nesecarily just drop it into
 ;; place from above.  But it looks like the game does not take this 
 ;; into account.
-(defun drop-piece-in-table (tabel piece position)
-    table)
+;(defun drop-piece-in-table (table piece position &optional (level 0))
+;  (if (can-drop-element  
+;    table)
+
+;(defun 
