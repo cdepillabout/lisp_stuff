@@ -215,8 +215,7 @@ row of table."
 (defun elem-at-bottom-of-table (table piece row column position level)
   "Returns true if the element of piece is at the bottom of the TABLE."
   (table-piece-pos-level-assert table piece row column position level)
-  ;; TODO, this is where my error is!!
-  (= (+ (1+ level) row)
+  (= (- (1+ level) (get-row-from-bottom piece row))
 	 (length table)))
 
 (defun can-drop-element (table piece row column element position level)
@@ -254,7 +253,7 @@ element of piece, not the level of the currently working element."
 			  ((listp first-elem)
 			   (append (flatten first-elem) (flatten remaining)))))))
 
-(defun can-drop-piece-helper (table piece position level)
+(defun can-drop-piece-at-level-helper (table piece position level)
   (loop
 	 for row from 0 to (1- (length piece))
 	 collect (loop
@@ -263,17 +262,64 @@ element of piece, not the level of the currently working element."
 				collect (can-drop-element table piece row
 										  column element position level))))
 
-(defun can-drop-piece (table piece position level)
+(defun can-drop-piece-at-level (table piece position level)
   "Returns true if we can drop this piece into level and position of table."
-  ;(every #'(lambda (x) (eq x t))
-		 (flatten (can-drop-piece-helper table piece position level)))
-  
-;; TODO: This isn't exactly what we want.  We want to be able to place
-;; a piece stategically in the table, not nesecarily just drop it into
-;; place from above.  But it looks like the game does not take this 
-;; into account.
-;(defun drop-piece-in-table (table piece position &optional (level 0))
-;  (if (can-drop-element  
-;    table)
+  (every #'(lambda (x) (eq x t))
+		 (flatten (can-drop-piece-at-level-helper table piece position level))))
 
-;(defun 
+
+(defun can-drop-piece-at-pos (table piece pos)
+  "Returns true if we can drop piece at pos and it will fit in the table."
+  (if (< (length table) (length piece))
+	  nil
+	  (every #'(lambda (x) (eq x t))
+			 (loop for level from 0 to (1- (length piece))
+				collect (can-drop-piece-at-level table piece pos level)))))
+
+;(defun can-put-element-on-table (table piece row column pos exact-level)
+;  "Returns true if element from PIECE at ROWxCOLUMN can go at the exact pos and level from TABLE."
+;  (let ((table-element (get-element (+ exact-level (+ pos column) table))
+;		(piece-element (get-element row column piece)))
+;	(when (or (equal table-element *empty-symbol*)
+;			  (equal piece-element *empty-symbol*))
+;	  t)))
+		
+						  
+
+;(defun can-put-piece-at-level (table piece pos level)
+ ; "Make sure new piece PIECE can go into table at level LEVEL. Make sure none of the elements of PIECE overlap with nonempty elements of TABLE."
+  ;(loop for row from 0 to (1- (length piece))
+;	 collect (loop for column from 0 to (1- (length row))
+;				collect (can-put-element-on-table table piece row column
+;												  pos level
+							 
+
+
+
+(defun put-piece-at-level (table piece pos level)
+  "Return a TABLE with new piece PIECE at level LEVEL."
+  ;(assert (can-put-piece-at-level table piece position level))
+  (let ((new-table (copy-tree table)))
+	(loop for row from 0 to (1- (length piece))
+	   do (loop for column from 0 to (1- (length (car piece)))
+			 do (let ((piece-element (get-element row column piece))
+					  (new-level (- level (get-row-from-bottom piece row)))
+					  (new-pos (+ pos column)))
+				  (format t "setting piece-element: ~a, new-level: ~a, new-pos: ~a~%"
+						  piece-element new-level new-pos)
+				  (setf new-table (set-element piece-element new-level new-pos new-table)))))
+	new-table))
+  
+
+(defun drop-piece-in-table (table piece pos)
+  "Returns a table with piece dropped in it at pos."
+  (assert (can-drop-piece-at-pos table piece pos) (table piece pos)
+		  "Cannot drop PIECE(~a) at POS(~a) in TABLE(~a)"
+		  piece pos table)
+  (let ((new-level 
+		 (loop
+			for i from 0 to (1- (length table))
+			while (can-drop-piece-at-level table piece pos i)
+			maximize i)))
+	(put-piece-at-level table piece pos level)))
+	  
