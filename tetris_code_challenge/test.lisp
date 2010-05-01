@@ -49,7 +49,7 @@
 					
 (defun print-piece (piece)
   "Print a piece.  Right now this just calls print-play-table."
-  (print-play-table piece))
+  (print-play-space piece))
 						 
 (defparameter *num-of-columns* 10)
 (defparameter *num-of-rows* 20)
@@ -99,15 +99,9 @@ rows have the same number of characters."
   (let* ((old-rows (num-rows piece))
 		 (old-cols (num-columns piece))
 		 (new-piece (create-play-space old-cols old-rows)))
-;	(format t "old rows: ~a, old-cols: ~a, old-piece:~%"
-;			old-rows old-cols)
-;	(print-play-space piece)
-;	(format t "new piece:~%")
-;	(print-play-space new-piece)
 	(loop for i from 0 to (1- old-rows)
 	   do (loop for j from 0 to (1- old-cols)
 			 do (progn
-				  ;(format t "i: ~a, j: ~a~%" i j)
 				  (setf new-piece
 						(set-element (get-element i j piece)
 									 j i new-piece)))))
@@ -213,7 +207,7 @@ row of table."
 				*empty-symbol*))))
 
 (defun elem-at-bottom-of-table (table piece row column position level)
-  "Returns true if the element of piece is at the bottom of the TABLE."
+  "Returns true if the elmeent of piece is at the bottom of the TABLE."
   (table-piece-pos-level-assert table piece row column position level)
   (= (- (1+ level) (get-row-from-bottom piece row))
 	 (length table)))
@@ -321,5 +315,9 @@ element of piece, not the level of the currently working element."
 			for i from 0 to (1- (length table))
 			while (can-drop-piece-at-level table piece pos i)
 			maximize i)))
-	(put-piece-at-level table piece pos level)))
+	(put-piece-at-level table piece pos new-level)))
 	  
+;; make sure pieces drop all the way down to the lowest level
+;; make sure pieces don't erase parts of other pieces when they are dropped.
+;;   (for instance, if you drop a j-piece upside down on another j-piece,
+;;    part of the first one will get erased)
