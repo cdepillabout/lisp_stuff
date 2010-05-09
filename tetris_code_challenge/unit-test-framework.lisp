@@ -5,6 +5,7 @@
      ,@body))
 
 (defvar *test-name* nil)
+(defvar *test-failures* nil)
 
 (defmacro deftest (name parameters &body body)
   "Define a test function. Within a test function we can call
@@ -28,7 +29,8 @@
 
 (defun report-result (result form)
   "Report the results of a single test case. Called by 'check'."
-  (format t "~:[FAIL~;pass~] ... ~a: ~a~%" result *test-name* form)
+  (unless result
+	(format t "~:[FAIL~;pass~] ... ~a: ~a~%" result *test-name* form))
   result)
 
 

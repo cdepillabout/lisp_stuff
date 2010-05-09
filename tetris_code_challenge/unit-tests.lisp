@@ -1,4 +1,4 @@
-(in-package :unit-test)
+(in-package :unit-tests)
 
 (deftest test-+ ()
   (check
@@ -18,4 +18,6 @@
 (deftest test-math ()
   (test-arithmetic))
 
-(test-math)
+(defun test-everything ()
+  (if (test-math)
+	  (format t "Everything Passed~%")))
