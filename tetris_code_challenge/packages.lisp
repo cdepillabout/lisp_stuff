@@ -5,8 +5,6 @@
   (:export :deftest
 		   :check))
 
-(defpackage :unit-tests
-  (:use :common-lisp :unit-test-framework :tetris-challenge))
 
 (defpackage :tetris-challenge
   (:use :common-lisp)
@@ -15,4 +13,8 @@
 		   :*i-piece* :*j-piece* :*l-piece* :*o-piece*
 		   :*s-piece* :*t-piece* :*z-piece*
 		   :create-piece :print-piece
-		   :rotate-90 :rotate-180 :rotate-270))
+		   :rotate-90 :rotate-180 :rotate-270
+		   :set-element :get-element :create-play-space))
+
+(defpackage :unit-tests
+  (:use :common-lisp :unit-test-framework :tetris-challenge))

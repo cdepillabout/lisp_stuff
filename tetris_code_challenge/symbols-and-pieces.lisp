@@ -1,4 +1,4 @@
-(in-package :symbols-and-pieces)
+(in-package :tetris-challenge)
 
 (defparameter *empty-symbol* ".")
 (defparameter *i-symbol* "i")

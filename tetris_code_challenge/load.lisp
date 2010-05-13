@@ -1,0 +1,11 @@
+(in-package :cl-user)
+
+(load "./packages.lisp")
+(load "./constants.lisp")
+(load "./general-funcs.lisp")
+(load "./piece-manipulation.lisp")
+(load "./element-manipulation.lisp")
+(load "./symbols-and-pieces.lisp")
+(load "./assertions.lisp")
+(load "./unit-test-framework.lisp")
+(load "./unit-tests.lisp")
